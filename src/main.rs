@@ -1,9 +1,10 @@
 use select::document::Document;
-use select::node::{Children, Node};
-use select::predicate::{Child, Class, Element, Name, Text};
+use select::predicate::Class;
 use serde::{Deserialize, Serialize};
 use std::convert::Infallible;
 use warp::Filter;
+mod helpers;
+use helpers::selector_helpers;
 
 #[derive(Serialize, Deserialize, Debug)]
 struct ServerResponse<'a> {
@@ -25,61 +26,19 @@ async fn main() {
 
         let doc = Document::from(html_text.as_str());
 
-        let is_not_text = |node: &Node| node.name().is_some();
-
         let mut remaining = doc
             .find(Class("remaining"))
             .next()
             .expect("Couldn't find .remaining on page")
             .children()
-            .filter(is_not_text);
+            .filter(selector_helpers::is_not_text);
 
         remaining.next();
 
-        let calories = remaining
-            .next()
-            .unwrap()
-            .children()
-            .next()
-            .unwrap()
-            .as_text()
-            .unwrap();
-        let carbs = remaining
-            .next()
-            .unwrap()
-            .children()
-            .filter(is_not_text)
-            .next()
-            .unwrap()
-            .children()
-            .next()
-            .unwrap()
-            .as_text()
-            .unwrap();
-        let fat = remaining
-            .next()
-            .unwrap()
-            .children()
-            .filter(is_not_text)
-            .next()
-            .unwrap()
-            .children()
-            .next()
-            .unwrap()
-            .as_text()
-            .unwrap();
-        let protein = remaining
-            .next()
-            .unwrap()
-            .children()
-            .filter(is_not_text)
-            .next()
-            .unwrap()
-            .children()
-            .next()
-            .unwrap()
-            .as_text()
-            .unwrap();
+        let calories = selector_helpers::get_calories(remaining.next().unwrap());
+        let carbs = selector_helpers::get_macro_value(remaining.next().unwrap());
+        let fat = selector_helpers::get_macro_value(remaining.next().unwrap());
+        let protein = selector_helpers::get_macro_value(remaining.next().unwrap());
 
         let res = ServerResponse {
             calories,
