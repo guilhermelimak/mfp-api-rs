@@ -1,7 +1,7 @@
 pub mod selector_helpers {
     use select::node::Node;
 
-    pub fn get_macro_value(n: Node) -> &str {
+    pub fn get_macro_value(n: Node) -> Option<&str> {
         n.children()
             .filter(is_not_text)
             .next()
@@ -10,11 +10,10 @@ pub mod selector_helpers {
             .next()
             .unwrap()
             .as_text()
-            .unwrap()
     }
 
-    pub fn get_calories(n: Node) -> &str {
-        n.children().next().unwrap().as_text().unwrap()
+    pub fn get_calories(n: Node) -> Option<&str> {
+        n.children().next().unwrap().as_text()
     }
 
     pub fn is_not_text(node: &Node) -> bool {

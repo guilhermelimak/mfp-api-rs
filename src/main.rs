@@ -14,6 +14,11 @@ struct ServerResponse<'a> {
     fat: &'a str,
 }
 
+#[derive(Serialize, Deserialize, Debug)]
+struct ServerError<'a> {
+    error: &'a str,
+}
+
 #[tokio::main]
 async fn main() {
     async fn handle(name: String) -> Result<impl warp::Reply, Infallible> {
@@ -26,19 +31,52 @@ async fn main() {
 
         let doc = Document::from(html_text.as_str());
 
-        let mut remaining = doc
-            .find(Class("remaining"))
-            .next()
-            .expect("Couldn't find .remaining on page")
-            .children()
-            .filter(selector_helpers::is_not_text);
+        let mut remaining = match doc.find(Class("remaining")).next() {
+            Some(r) => r.children().filter(selector_helpers::is_not_text),
+            None => {
+                return Ok(warp::reply::json(&ServerError {
+                    error: "Error while getting .remaining element. Maybe the username is wrong?",
+                }));
+            }
+        };
 
         remaining.next();
 
-        let calories = selector_helpers::get_calories(remaining.next().unwrap());
-        let carbs = selector_helpers::get_macro_value(remaining.next().unwrap());
-        let fat = selector_helpers::get_macro_value(remaining.next().unwrap());
-        let protein = selector_helpers::get_macro_value(remaining.next().unwrap());
+        let calories = match selector_helpers::get_calories(remaining.next().unwrap()) {
+            Some(c) => c,
+            None => {
+                return Ok(warp::reply::json(&ServerError {
+                    error: "Error while getting calories",
+                }));
+            }
+        };
+
+        let carbs = match selector_helpers::get_macro_value(remaining.next().unwrap()) {
+            Some(c) => c,
+            None => {
+                return Ok(warp::reply::json(&ServerError {
+                    error: "Error while getting carbs",
+                }));
+            }
+        };
+
+        let fat = match selector_helpers::get_macro_value(remaining.next().unwrap()) {
+            Some(c) => c,
+            None => {
+                return Ok(warp::reply::json(&ServerError {
+                    error: "Error while getting fat",
+                }));
+            }
+        };
+
+        let protein = match selector_helpers::get_macro_value(remaining.next().unwrap()) {
+            Some(c) => c,
+            None => {
+                return Ok(warp::reply::json(&ServerError {
+                    error: "Error while getting protein",
+                }));
+            }
+        };
 
         let res = ServerResponse {
             calories,
@@ -46,6 +84,7 @@ async fn main() {
             protein,
             fat,
         };
+
         Ok(warp::reply::json(&res))
     }
 
